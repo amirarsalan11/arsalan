@@ -1,0 +1,14 @@
+# --- Core AI pipeline stages implemented so far ---
+numpy==2.1.1
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+
+# --- Segmentation stage (model_registry.py / segmentor.py) ---
+# Imported lazily inside model_registry.py's load path, so every other
+# module in this package remains usable without these installed. Still
+# declared here since the segmentation stage genuinely needs them.
+torch==2.4.1
+transformers==4.44.2
+
+# --- Testing ---
+pytest==8.3.3

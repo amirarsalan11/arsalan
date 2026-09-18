@@ -1,0 +1,29 @@
+# Env
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+
+# Alembic (keep migration files, ignore local sqlite/test artifacts)
+*.sqlite3
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log

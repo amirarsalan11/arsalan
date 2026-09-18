@@ -1,0 +1,21 @@
+{
+  "name": "@room-visualizer/sdk",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Room Visualizer SaaS - framework-independent JS SDK that creates and manages the iframe widget.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "eslint": "^9.10.0",
+    "prettier": "^3.3.3",
+    "vitest": "^2.0.5",
+    "jsdom": "^25.0.0"
+  }
+}
