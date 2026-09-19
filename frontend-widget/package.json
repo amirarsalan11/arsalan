@@ -1,0 +1,30 @@
+{
+  "name": "room-visualizer-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Room Visualizer SaaS - iframe-embedded React widget (UI only, no backend/AI logic).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.6",
+    "vitest": "^2.0.5",
+    "eslint": "^9.10.0",
+    "prettier": "^3.3.3",
+    "jsdom": "^25.0.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.5.0"
+  }
+}

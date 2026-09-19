@@ -1,0 +1,94 @@
+# Room Visualizer SaaS — Local development orchestration (Milestone 1: Project Foundation)
+#
+# Services present here map directly to the locked architecture diagram:
+#   Customer Website -> ... -> API Gateway -> FastAPI Backend -> Celery+Redis -> GPU Worker -> AI Rendering -> Object Storage
+#
+# Milestone 1 scope:
+# - postgres, redis, api, and worker containers exist and boot.
+# - `worker` has no Celery tasks registered yet (Async Worker System is Milestone 13) —
+#   it starts as an idle placeholder process so the service topology is correct from day one.
+# - `gpu-worker` is defined but disabled by default via a Compose profile, since no AI
+#   pipeline or model exists yet (SegFormer Integration is Milestone 7).
+#
+# No Kubernetes, Terraform, or complex CI/CD — consistent with Technology Restrictions.
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-roomviz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-roomviz}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-roomviz}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://roomviz:changeme@postgres:5432/roomviz}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+
+  # Placeholder Celery worker container. No tasks are registered yet.
+  # Defined now so the service topology matches the architecture diagram;
+  # real task implementation arrives in Milestone 13 (Async Worker System).
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["python", "-c", "print('Celery worker placeholder - no tasks registered yet'); import time; time.sleep(3600)"]
+    env_file:
+      - ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+
+  # GPU worker / AI Engine service placeholder.
+  # Disabled by default (requires the "gpu" profile) since no pipeline or
+  # model exists yet. Enable explicitly once Milestone 7+ lands:
+  #   docker compose --profile gpu up
+  gpu-worker:
+    build:
+      context: ../ai-engine
+      dockerfile: Dockerfile
+    profiles: ["gpu"]
+    restart: "no"
+
+volumes:
+  postgres_data:
