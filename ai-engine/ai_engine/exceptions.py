@@ -97,3 +97,16 @@ class LightingAdjustmentError(PipelineStageError):
     than reusing the previous stage's, so `stage` on the raised error
     always names the stage that actually detected the problem.
     """
+
+
+class CompositingError(PipelineStageError):
+    """Raised by the Compositing stage when the room image
+    (PreprocessedImage), floor mask (ProcessedMask), or lit material
+    (LightingResult) are malformed, mismatched in resolution, or
+    otherwise cannot be safely combined into a final render.
+
+    Same one-exception-per-stage rationale as every other stage in
+    this hierarchy: reusing e.g. LightingAdjustmentError here would
+    misattribute the failure to a stage that didn't actually detect
+    it.
+    """

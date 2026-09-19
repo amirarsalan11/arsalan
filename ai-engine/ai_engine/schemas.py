@@ -190,6 +190,29 @@ class LightingResult:
     target_mean_luminance: float  # the target actually used (caller-supplied, or the MVP default)
 
 
+# --- stage 8: Compositor output -------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CompositingResult:
+    """Output of compositing/compositor.py.
+
+    The final render: the room's own image with the lit, warped
+    material pasted in at `canvas_offset`, restricted to wherever
+    BOTH the material's own alpha AND the actual floor segmentation
+    mask agree a pixel is real floor. That intersection — not the
+    material's alpha alone — is what "respects segmentation masks"
+    means here: the perspective canvas is only a bounding-box
+    approximation of the floor's true (possibly irregular, possibly
+    furniture-occluded) shape, and ProcessedMask.binary_mask is the
+    authoritative source for that true shape.
+    """
+
+    composited_image: np.ndarray  # HxWx3 uint8 RGB, SAME size as PreprocessedImage.original_image
+    output_size: tuple[int, int]  # (width, height); always equal to PreprocessedImage.original_size
+    applied_pixel_count: int  # how many room-image pixels were actually replaced (0 if no overlap)
+
+
 # --- orchestration-level records ----------------------------------------
 
 
