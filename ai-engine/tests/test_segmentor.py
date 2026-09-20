@@ -18,6 +18,7 @@ code being exercised, not a mock.
 
 from __future__ import annotations
 
+import sys
 import threading
 
 import numpy as np
@@ -125,12 +126,67 @@ def test_registry_raises_model_load_error_when_dependencies_missing() -> None:
 # --- segmentor.py: TorchSegmentationBackend without torch installed --------
 
 
-def test_torch_backend_raises_inference_error_without_torch() -> None:
-    """Real (unmocked) path: torch is genuinely absent here, so this
-    confirms TorchSegmentationBackend.predict's ImportError handling
-    actually fires, not just that the except clause is written."""
+def test_torch_backend_raises_inference_error_without_torch(monkeypatch) -> None:
+    """Deterministically forces `import torch` to fail inside
+    `predict()`, regardless of whether torch is actually installed in
+    whatever environment runs this test.
+
+    Root-cause note: this test previously relied on torch genuinely
+    being ABSENT from the ambient environment to exercise predict()'s
+    `except ImportError` branch. That happened to hold in one sandbox
+    but is not true of a normal development machine with the AI
+    dependency stack installed — there, `import torch` succeeds and
+    execution reaches `SegmentationModelRegistry.get()` instead, which
+    correctly raises ModelLoadError (not InferenceError) once
+    Hugging Face's `from_pretrained()` fails to find the placeholder
+    checkpoint. That is correct production behavior, not a bug — see
+    `test_torch_backend_propagates_model_load_error_when_registry_load_fails`
+    below for that path. This test's OWN job is narrower: prove that
+    IF torch itself is unavailable, predict() raises InferenceError.
+    Setting `sys.modules["torch"] = None` is the standard technique
+    for forcing that precise precondition deterministically — CPython
+    raises ImportError immediately for any `import torch` while that
+    entry is set to None — so this test passes identically whether or
+    not torch is actually installed, while still exercising the real,
+    unmocked `except ImportError` line in predict().
+    """
+    monkeypatch.setitem(sys.modules, "torch", None)
+
     backend = TorchSegmentationBackend()
     with pytest.raises(InferenceError):
+        backend.predict(np.zeros((512, 512, 3), dtype=np.uint8))
+
+
+def test_torch_backend_propagates_model_load_error_when_registry_load_fails(monkeypatch) -> None:
+    """Covers the scenario a real, torch-installed environment
+    actually hits: torch imports fine, but the model registry's load
+    fails (e.g. Hugging Face returns 401/RepositoryNotFoundError for
+    the placeholder checkpoint identifier). predict() must let
+    ModelLoadError propagate uncaught — NOT re-categorize it as
+    InferenceError — since a load failure and an inference failure
+    are deliberately distinct in this project's exception hierarchy.
+
+    A minimal fake `torch` module is injected into sys.modules so
+    `import torch` succeeds deterministically regardless of whether
+    real torch is actually installed wherever this test runs — the
+    fake module never needs any real behavior, since `_load` is made
+    to fail before predict() ever touches a torch attribute. `_load`
+    itself is monkeypatched (same established pattern as the registry
+    tests above); no network access occurs either way.
+    """
+    import types
+
+    monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
+
+    def failing_load(model_identifier: str) -> SegmentationModelBundle:
+        raise ModelLoadError(
+            "model_registry", f"Simulated 401/RepositoryNotFoundError for '{model_identifier}'."
+        )
+
+    monkeypatch.setattr(SegmentationModelRegistry, "_load", staticmethod(failing_load))
+
+    backend = TorchSegmentationBackend()
+    with pytest.raises(ModelLoadError):
         backend.predict(np.zeros((512, 512, 3), dtype=np.uint8))
 
 
