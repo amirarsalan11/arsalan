@@ -234,12 +234,28 @@ PipelineStatus = Literal["ok", "no_floor_detected", "low_confidence", "geometry_
 
 @dataclass(frozen=True, slots=True)
 class PipelineResult:
-    """Final result of pipeline.py's RenderPipeline.run()."""
+    """Final result of pipeline.py's RenderPipeline.run().
+
+    `material`/`perspective`/`lighting`/`compositing` are None unless
+    `run()` was called with `material_bytes` AND geometry was usable
+    (i.e. `geometry is not None` — note this can be true even when
+    `status == "geometry_degraded"`, since a polygon-only geometry
+    estimate, missing only a vanishing point, is still a real,
+    usable FloorGeometry). They stay None for every existing call
+    site that only ever passed `image_bytes`, and for any early-exit
+    path (no_floor_detected, or the GeometryEstimationError sub-case
+    of geometry_degraded where geometry itself is still None) —
+    preserving all pre-existing behavior exactly.
+    """
 
     status: PipelineStatus
     preprocessed: PreprocessedImage
     segmentation: SegmentationResult
     mask: ProcessedMask
     geometry: FloorGeometry | None  # None if short-circuited before this stage ran
+    material: PreparedMaterial | None = None
+    perspective: PerspectiveTransformResult | None = None
+    lighting: LightingResult | None = None
+    compositing: CompositingResult | None = None
     timings: list[StageTiming] = field(default_factory=list)
     warnings: list[PipelineWarning] = field(default_factory=list)
